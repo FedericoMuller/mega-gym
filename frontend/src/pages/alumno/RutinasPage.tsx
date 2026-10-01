@@ -2,13 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { listarRutinas } from "@/api/rutinas";
+import { Miniatura } from "@/components/ejercicios/piezas";
+import { agruparPorDia, diaDeHoy } from "@/utils/dias";
 
 export function RutinasPage() {
   const { data: rutinas, isLoading } = useQuery({
     queryKey: ["rutinas"],
     queryFn: listarRutinas,
   });
-  const [enfoqueSeleccionado, setEnfoqueSeleccionado] = useState<string | null>(null);
+  const [diaSeleccionado, setDiaSeleccionado] = useState<string | null>(null);
 
   if (isLoading) return <p className="text-white/60">Cargando rutinas...</p>;
 
@@ -22,43 +24,55 @@ export function RutinasPage() {
   }
 
   const rutina = rutinas[0]; // rutina activa más reciente
-  const enfoques = Array.from(new Set(rutina.cronograma.map((c) => c.enfoque)));
-  const enfoqueActivo = enfoqueSeleccionado ?? enfoques[0];
+  const grupos = agruparPorDia(rutina.items);
+
+  if (grupos.length === 0) {
+    return (
+      <div className="rounded-lg bg-brand-surface p-6 text-center text-white/70">
+        Tu rutina todavía no tiene ejercicios cargados. Contactá a tu profesor.
+      </div>
+    );
+  }
+
+  const hoy = diaDeHoy();
+  const codigoActivo = diaSeleccionado ?? (grupos.find((g) => g.codigo === hoy) ?? grupos[0]).codigo;
+  const grupoActivo = grupos.find((g) => g.codigo === codigoActivo) ?? grupos[0];
 
   return (
     <div>
-      <h1 className="mb-4 text-xl font-bold">Mis rutinas</h1>
+      <h1 className="text-xl font-bold">Mis rutinas</h1>
+      <p className="mb-4 text-sm text-white/50">{rutina.nombre || "Rutina"}</p>
 
       <div className="mb-4 flex gap-2 overflow-x-auto pb-2">
-        {enfoques.map((enfoque) => (
+        {grupos.map((g) => (
           <button
-            key={enfoque}
-            onClick={() => setEnfoqueSeleccionado(enfoque)}
+            key={g.codigo}
+            onClick={() => setDiaSeleccionado(g.codigo)}
             className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm ${
-              enfoqueActivo === enfoque
-                ? "bg-brand-accent text-black"
+              grupoActivo.codigo === g.codigo
+                ? "bg-brand-accent font-semibold text-black"
                 : "bg-brand-surface text-white/60"
             }`}
           >
-            {enfoque}
+            {g.largo}
+            {g.codigo === hoy && <span className="ml-1.5 text-xs opacity-70">· hoy</span>}
           </button>
         ))}
       </div>
 
       <div className="space-y-3">
-        {rutina.ejercicios.map((ejercicio) => (
+        {grupoActivo.items.map((item) => (
           <Link
-            key={ejercicio.id}
-            to={`/rutinas/ejercicio/${ejercicio.id}`}
-            state={{ ejercicio }}
+            key={item.id}
+            to={`/rutinas/ejercicio/${item.ejercicio.id}`}
+            state={{ ejercicio: item.ejercicio, series: item.series, repeticiones: item.repeticiones }}
             className="flex items-center gap-3 rounded-xl bg-brand-surface p-3"
           >
-            <div className="h-14 w-14 flex-shrink-0 rounded-lg bg-white/10" />
+            <Miniatura imagen={item.ejercicio.imagen} className="h-14 w-14" />
             <div className="flex-1">
-              <p className="font-medium">{ejercicio.nombre_ejercicio}</p>
+              <p className="font-medium">{item.ejercicio.nombre_ejercicio}</p>
               <p className="text-xs text-white/50">
-                {ejercicio.series.length} series x{" "}
-                {ejercicio.series[0]?.cantidad ?? "-"} repeticiones
+                {item.series} series x {item.repeticiones} repeticiones
               </p>
             </div>
             <span className="text-white/30">›</span>

@@ -10,21 +10,23 @@ export function ProfesoresAdminPage() {
     queryFn: listarProfesores,
   });
   const [mostrarForm, setMostrarForm] = useState(false);
-  const [form, setForm] = useState({
+  const FORM_VACIO = {
     username: "",
     password: "",
     first_name: "",
     apellido: "",
     dni: "",
+    fecha_nacimiento: "",
     email: "",
-  });
+  };
+  const [form, setForm] = useState(FORM_VACIO);
 
   const crear = useMutation({
     mutationFn: () => crearProfesor(form),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-profesores"] });
       setMostrarForm(false);
-      setForm({ username: "", password: "", first_name: "", apellido: "", dni: "", email: "" });
+      setForm(FORM_VACIO);
     },
   });
 
@@ -53,6 +55,12 @@ export function ProfesoresAdminPage() {
           <Input label="Nombre" value={form.first_name} onChange={(v) => setForm({ ...form, first_name: v })} />
           <Input label="Apellido" value={form.apellido} onChange={(v) => setForm({ ...form, apellido: v })} />
           <Input label="DNI" value={form.dni} onChange={(v) => setForm({ ...form, dni: v })} />
+          <Input
+            label="Fecha de nacimiento"
+            type="date"
+            value={form.fecha_nacimiento}
+            onChange={(v) => setForm({ ...form, fecha_nacimiento: v })}
+          />
           <Input label="Email" type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} />
           <button
             type="submit"

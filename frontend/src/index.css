@@ -5,3 +5,17 @@
 body {
   @apply bg-brand-bg text-white min-h-screen;
 }
+
+@layer components {
+  .checkbox-brand {
+    @apply h-4 w-4 shrink-0 cursor-pointer appearance-none rounded border border-white/30 bg-brand-bg;
+  }
+  .checkbox-brand:checked {
+    @apply border-brand-accent bg-brand-accent;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23121212' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E");
+    background-size: 100% 100%;
+  }
+  .checkbox-brand:focus-visible {
+    @apply outline-none ring-2 ring-brand-accent/60;
+  }
+}

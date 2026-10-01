@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { ModalMensaje } from "@/components/ui/ModalMensaje";
 
 export function LoginPage() {
   const [modo, setModo] = useState<"alumno" | "profesor">("alumno");
@@ -38,7 +39,7 @@ export function LoginPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-6">
       <div className="mb-10 text-center">
-        <div className="mb-2 text-4xl">🏋️</div>
+        <img src="/icons/icon-192.png" alt="" className="mx-auto mb-2 h-16 w-16 rounded-2xl" />
         <h1 className="text-2xl font-bold">Mega Gym</h1>
       </div>
 
@@ -95,8 +96,6 @@ export function LoginPage() {
           </>
         )}
 
-        {error && <p className="text-sm text-red-400">{error}</p>}
-
         <button
           type="submit"
           disabled={cargando}
@@ -105,6 +104,14 @@ export function LoginPage() {
           {cargando ? "Ingresando..." : "Ingresar"}
         </button>
       </form>
+
+      {error && (
+        <ModalMensaje
+          titulo="No se pudo iniciar sesión"
+          mensaje={error}
+          onAceptar={() => setError("")}
+        />
+      )}
     </div>
   );
 }

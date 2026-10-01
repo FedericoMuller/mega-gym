@@ -14,9 +14,13 @@ class SeguimientoViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if user.es_profesor:
-            return Seguimiento.objects.all()
-        return Seguimiento.objects.filter(usuario=user)  # RF.6: alumno ve su propio plan
+        if not user.es_profesor:
+            return Seguimiento.objects.filter(usuario=user)  # RF.6: alumno ve su propio plan
+        qs = Seguimiento.objects.all()
+        usuario_id = self.request.query_params.get("usuario")
+        if usuario_id:
+            qs = qs.filter(usuario_id=usuario_id)
+        return qs
 
     def perform_create(self, serializer):
         # Si es alumno, el plan se asocia a sí mismo (RF.5)

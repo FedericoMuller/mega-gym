@@ -15,6 +15,16 @@ class EstadoRutina(models.TextChoices):
     INACTIVA = "inactiva", "Inactiva"
 
 
+class DiaSemana(models.TextChoices):
+    LUNES = "lun", "Lunes"
+    MARTES = "mar", "Martes"
+    MIERCOLES = "mie", "Miércoles"
+    JUEVES = "jue", "Jueves"
+    VIERNES = "vie", "Viernes"
+    SABADO = "sab", "Sábado"
+    DOMINGO = "dom", "Domingo"
+
+
 class TipoRutina(models.Model):
     """RF.14, RF.15: tipos de rutina (Incluye: nombre del tipo de rutina)."""
     nombre = models.CharField(max_length=100)
@@ -34,15 +44,13 @@ class Rutina(models.Model):
     tipo_rutina = models.ForeignKey(
         TipoRutina, on_delete=models.SET_NULL, null=True, related_name="rutinas"
     )
+    nombre = models.CharField(max_length=100, blank=True)
     fecha_inicio = models.DateField()
-    objetivo = models.CharField(max_length=200)
+    objetivo = models.CharField(max_length=200, blank=True)  # se muestra como "Descripción"
     nivel = models.CharField(max_length=15, choices=NivelRutina.choices)
     estado = models.CharField(
         max_length=10, choices=EstadoRutina.choices, default=EstadoRutina.ACTIVA
     )
-    ejercicios = models.ManyToManyField(
-        "ejercicios.Ejercicio", blank=True, related_name="rutinas"
-    )  # RF.18: asociar la rutina con ejercicios
     plan_seguimiento = models.ForeignKey(
         "seguimiento.Seguimiento",
         null=True,
@@ -53,6 +61,28 @@ class Rutina(models.Model):
 
     def __str__(self):
         return f"Rutina {self.id} - {self.usuario}"
+
+
+class RutinaEjercicio(models.Model):
+    """
+    RF.18 + RF.10: ejercicio de una rutina para un día de la semana, con las
+    series y repeticiones (por serie) a realizar. El alumno tiene una lista
+    distinta de ejercicios por cada día.
+    """
+    rutina = models.ForeignKey(Rutina, on_delete=models.CASCADE, related_name="items")
+    ejercicio = models.ForeignKey(
+        "ejercicios.Ejercicio", on_delete=models.CASCADE, related_name="usos_en_rutinas"
+    )
+    dia = models.CharField(max_length=3, choices=DiaSemana.choices)
+    orden = models.PositiveSmallIntegerField(default=0)
+    series = models.PositiveSmallIntegerField()
+    repeticiones = models.CharField(max_length=15)  # "10" o un rango, ej. "8-10"
+
+    class Meta:
+        ordering = ["orden", "id"]
+
+    def __str__(self):
+        return f"{self.get_dia_display()}: {self.ejercicio} {self.series}x{self.repeticiones}"
 
 
 class Cronograma(models.Model):

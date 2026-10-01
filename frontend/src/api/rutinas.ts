@@ -4,26 +4,32 @@ export interface Ejercicio {
   id: number;
   nombre_ejercicio: string;
   url_ejercicio: string | null;
-  series: { id: number; cantidad: number }[];
-  pesos: { id: number; cantidad: number }[];
+  imagen: string | null;
+  categoria: string;
+  tipo: string;
+  equipamiento: string;
   accesorios: { id: number; descripcion: string }[];
 }
 
-export interface Cronograma {
+// Un ejercicio de la rutina para un día de la semana, con sus series y repeticiones.
+export interface RutinaItem {
   id: number;
   dia: string;
-  enfoque: string;
+  orden: number;
+  series: number;
+  repeticiones: string;
+  ejercicio: Ejercicio;
 }
 
 export interface Rutina {
   id: number;
   usuario: number;
+  nombre: string;
   fecha_inicio: string;
   objetivo: string;
   nivel: string;
   estado: string;
-  ejercicios: Ejercicio[];
-  cronograma: Cronograma[];
+  items: RutinaItem[];
 }
 
 // RF.13: visualizar rutina (filtrado por usuario en el backend según el rol)

@@ -1,11 +1,14 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { loginAlumno, loginProfesor, obtenerPerfil, Usuario } from "@/api/auth";
+import { actualizarMiPerfil, loginAlumno, loginProfesor, obtenerPerfil, Usuario } from "@/api/auth";
 
 interface AuthContextType {
   usuario: Usuario | null;
   cargando: boolean;
   ingresarComoAlumno: (dni: string) => Promise<void>;
   ingresarComoProfesor: (username: string, password: string) => Promise<void>;
+  actualizarPerfil: (
+    datos: Partial<Pick<Usuario, "first_name" | "apellido" | "fecha_nacimiento">>
+  ) => Promise<void>;
   salir: () => void;
 }
 
@@ -51,9 +54,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUsuario(null);
   }
 
+  async function actualizarPerfil(
+    datos: Partial<Pick<Usuario, "first_name" | "apellido" | "fecha_nacimiento">>
+  ) {
+    if (!usuario) return;
+    const actualizado = await actualizarMiPerfil(usuario.id, datos);
+    setUsuario(actualizado);
+  }
+
   return (
     <AuthContext.Provider
-      value={{ usuario, cargando, ingresarComoAlumno, ingresarComoProfesor, salir }}
+      value={{
+        usuario,
+        cargando,
+        ingresarComoAlumno,
+        ingresarComoProfesor,
+        actualizarPerfil,
+        salir,
+      }}
     >
       {children}
     </AuthContext.Provider>

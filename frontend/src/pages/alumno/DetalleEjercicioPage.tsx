@@ -1,8 +1,14 @@
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Ejercicio } from "@/api/rutinas";
 
+interface EstadoNavegacion {
+  ejercicio: Ejercicio;
+  series: number;
+  repeticiones: string;
+}
+
 export function DetalleEjercicioPage() {
-  const { state } = useLocation() as { state: { ejercicio: Ejercicio } };
+  const { state } = useLocation() as { state: EstadoNavegacion | null };
   const navigate = useNavigate();
   const { id } = useParams();
   const ejercicio = state?.ejercicio;
@@ -26,7 +32,11 @@ export function DetalleEjercicioPage() {
 
       <h1 className="mb-3 text-xl font-bold">{ejercicio.nombre_ejercicio}</h1>
 
-      <div className="mb-4 aspect-video w-full rounded-xl bg-white/10" />
+      <div className="mb-4 aspect-video w-full overflow-hidden rounded-xl bg-white/10">
+        {ejercicio.imagen && (
+          <img src={ejercicio.imagen} alt={ejercicio.nombre_ejercicio} className="h-full w-full object-cover" />
+        )}
+      </div>
 
       {ejercicio.url_ejercicio && (
         <a
@@ -41,8 +51,7 @@ export function DetalleEjercicioPage() {
 
       <div className="space-y-2 rounded-xl bg-brand-surface p-4">
         <p>
-          🔁 {ejercicio.series.length} series ・{" "}
-          {ejercicio.series[0]?.cantidad ?? "-"} repeticiones
+          🔁 {state.series} series ・ {state.repeticiones} repeticiones
         </p>
         {ejercicio.accesorios.length > 0 && (
           <p>🛠️ {ejercicio.accesorios.map((a) => a.descripcion).join(", ")}</p>

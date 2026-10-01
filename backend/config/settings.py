@@ -93,6 +93,10 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+
+# Archivos subidos (imágenes de ejercicios)
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Django REST Framework
@@ -112,7 +116,10 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 }
 
-# CORS: el frontend React corre en otro puerto/dominio
+# CORS: el frontend React corre en otro puerto/dominio.
+# "https://localhost" es el origen desde el que Capacitor sirve la app nativa en Android/iOS.
 CORS_ALLOWED_ORIGINS = config(
-    "CORS_ALLOWED_ORIGINS", default="http://localhost:5173", cast=Csv()
+    "CORS_ALLOWED_ORIGINS",
+    default="http://localhost:5173,https://localhost",
+    cast=Csv(),
 )

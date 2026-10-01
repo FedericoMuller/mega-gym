@@ -3,13 +3,20 @@ from .models import Usuario, Comentario
 
 
 class UsuarioSerializer(serializers.ModelSerializer):
+    tiene_rutina = serializers.SerializerMethodField()
+
     class Meta:
         model = Usuario
         fields = [
             "id", "username", "first_name", "apellido", "dni",
-            "fecha_nacimiento", "email", "rol", "estado", "profesor_asignado",
+            "fecha_nacimiento", "email", "rol", "estado",
+            "profesor_asignado", "is_superuser",
+            "tiene_rutina", "last_login", "date_joined",
         ]
-        read_only_fields = ["id"]
+        read_only_fields = ["id", "is_superuser", "last_login", "date_joined"]
+
+    def get_tiene_rutina(self, obj) -> bool:
+        return obj.rutinas.exists()
 
 
 class UsuarioCreateSerializer(serializers.ModelSerializer):
@@ -36,13 +43,3 @@ class ComentarioSerializer(serializers.ModelSerializer):
         model = Comentario
         fields = ["id", "usuario", "comentario", "fecha"]
         read_only_fields = ["id", "fecha"]
-
-class UsuarioSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Usuario
-        fields = [
-            "id", "username", "first_name", "apellido", "dni",
-            "fecha_nacimiento", "email", "rol", "estado",
-            "profesor_asignado", "is_superuser",
-        ]
-        read_only_fields = ["id", "is_superuser"]

@@ -1,4 +1,5 @@
 from rest_framework import viewsets
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 
 from apps.usuarios.permissions import EsProfesor
@@ -22,9 +23,32 @@ class AccesorioViewSet(SoloLecturaParaAlumno, viewsets.ModelViewSet):
     serializer_class = AccesorioSerializer
 
 
+class PaginacionEjercicios(PageNumberPagination):
+    # El catálogo se filtra/ordena en el cliente: permite pedir todo en una sola página.
+    page_size = 20
+    page_size_query_param = "page_size"
+    max_page_size = 500
+
+
 class EjercicioViewSet(SoloLecturaParaAlumno, viewsets.ModelViewSet):
-    queryset = Ejercicio.objects.all().prefetch_related("accesorios", "series", "pesos")
+    queryset = (
+        Ejercicio.objects.all()
+        .order_by("nombre_ejercicio")
+        .prefetch_related("accesorios", "series", "pesos")
+    )
     serializer_class = EjercicioSerializer
+    pagination_class = PaginacionEjercicios
+
+    def perform_update(self, serializer):
+        imagen_anterior = serializer.instance.imagen.name if serializer.instance.imagen else None
+        ejercicio = serializer.save()
+        if imagen_anterior and ejercicio.imagen.name != imagen_anterior:
+            ejercicio.imagen.storage.delete(imagen_anterior)
+
+    def perform_destroy(self, instance):
+        if instance.imagen:
+            instance.imagen.delete(save=False)
+        instance.delete()
 
 
 class PesoViewSet(SoloLecturaParaAlumno, viewsets.ModelViewSet):

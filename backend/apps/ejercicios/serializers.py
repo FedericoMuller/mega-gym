@@ -39,6 +39,7 @@ class EjercicioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ejercicio
         fields = [
-            "id", "nombre_ejercicio", "url_ejercicio", "maquinas",
+            "id", "nombre_ejercicio", "url_ejercicio", "categoria", "tipo",
+            "equipamiento", "imagen", "maquinas",
             "accesorios", "accesorio_ids", "series", "pesos",
         ]
