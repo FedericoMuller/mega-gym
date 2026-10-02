@@ -85,6 +85,24 @@ class RutinaEjercicio(models.Model):
         return f"{self.get_dia_display()}: {self.ejercicio} {self.series}x{self.repeticiones}"
 
 
+class RutinaEjercicioCompletado(models.Model):
+    """
+    El alumno marca un ejercicio de su rutina como realizado en una fecha
+    puntual (un mismo RutinaEjercicio se repite cada semana, por eso se
+    guarda la fecha y no solo el día).
+    """
+    item = models.ForeignKey(RutinaEjercicio, on_delete=models.CASCADE, related_name="completados")
+    fecha = models.DateField()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["item", "fecha"], name="unico_completado_por_fecha")
+        ]
+
+    def __str__(self):
+        return f"{self.item} completado el {self.fecha}"
+
+
 class Cronograma(models.Model):
     """RF.16, RF.17: cronograma de la rutina (Incluye: dia, enfoque)."""
     rutina = models.ForeignKey(Rutina, on_delete=models.CASCADE, related_name="cronograma")

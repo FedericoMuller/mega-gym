@@ -19,6 +19,7 @@ export interface RutinaItem {
   series: number;
   repeticiones: string;
   ejercicio: Ejercicio;
+  completados: string[]; // fechas (ISO) en las que el alumno lo marcó como realizado
 }
 
 export interface Rutina {
@@ -41,4 +42,10 @@ export async function listarRutinas() {
 export async function obtenerRutina(id: number) {
   const { data } = await api.get(`/rutinas/${id}/`);
   return data as Rutina;
+}
+
+// RF.13: el alumno marca/desmarca un ejercicio como realizado en una fecha puntual.
+export async function alternarCompletado(itemId: number, fecha: string) {
+  const { data } = await api.post(`/rutinas/items/${itemId}/toggle/`, { fecha });
+  return data as { completado: boolean };
 }

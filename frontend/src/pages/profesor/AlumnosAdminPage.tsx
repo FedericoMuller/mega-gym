@@ -1,23 +1,15 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Pencil } from "lucide-react";
 import {
   crearAlumno,
   listarAlumnos,
+  listarProfesores,
   modificarUsuario,
   obtenerStatsAlumnos,
 } from "@/api/admin";
 
 const PAGE_SIZE = 12;
-
-const FORM_VACIO = {
-  username: "",
-  password: "",
-  first_name: "",
-  apellido: "",
-  dni: "",
-  fecha_nacimiento: "",
-  email: "",
-};
 
 const COLORES_AVATAR = [
   "bg-pink-500/20 text-pink-400",
@@ -75,47 +67,18 @@ export function AlumnosAdminPage() {
     queryFn: () => listarAlumnos(filtros),
   });
 
-  const [mostrarForm, setMostrarForm] = useState(false);
-  const [form, setForm] = useState(FORM_VACIO);
-  const [editandoId, setEditandoId] = useState<number | null>(null);
-  const [formEdicion, setFormEdicion] = useState(FORM_VACIO);
-  const [menuAbiertoId, setMenuAbiertoId] = useState<number | null>(null);
+  const { data: profesores } = useQuery({
+    queryKey: ["admin-profesores-dropdown"],
+    queryFn: listarProfesores,
+  });
+
+  // null = cerrado; { alumno: null } = alta; { alumno } = edición
+  const [formulario, setFormulario] = useState<{ alumno: any | null } | null>(null);
 
   const invalidar = () => {
     queryClient.invalidateQueries({ queryKey: ["admin-alumnos"] });
     queryClient.invalidateQueries({ queryKey: ["admin-alumnos-stats"] });
   };
-
-  const crear = useMutation({
-    mutationFn: () => crearAlumno(form),
-    onSuccess: () => {
-      invalidar();
-      setMostrarForm(false);
-      setForm(FORM_VACIO);
-    },
-  });
-
-  const editar = useMutation({
-    mutationFn: () => modificarUsuario(editandoId as number, formEdicion),
-    onSuccess: () => {
-      invalidar();
-      setEditandoId(null);
-    },
-  });
-
-  function abrirEdicion(alumno: any) {
-    setMenuAbiertoId(null);
-    setEditandoId(alumno.id);
-    setFormEdicion({
-      username: alumno.username ?? "",
-      password: "",
-      first_name: alumno.first_name ?? "",
-      apellido: alumno.apellido ?? "",
-      dni: alumno.dni ?? "",
-      fecha_nacimiento: alumno.fecha_nacimiento ?? "",
-      email: alumno.email ?? "",
-    });
-  }
 
   const alumnos = pagina_datos?.results ?? [];
   const total = pagina_datos?.count ?? 0;
@@ -136,10 +99,10 @@ export function AlumnosAdminPage() {
           <p className="text-sm text-white/50">Gestioná los alumnos y su información.</p>
         </div>
         <button
-          onClick={() => setMostrarForm((v) => !v)}
+          onClick={() => setFormulario({ alumno: null })}
           className="rounded-lg bg-brand-accent px-4 py-2 text-sm font-semibold text-black"
         >
-          {mostrarForm ? "Cancelar" : "+ Nuevo alumno"}
+          + Nuevo alumno
         </button>
       </div>
 
@@ -184,77 +147,6 @@ export function AlumnosAdminPage() {
         </select>
       </div>
 
-      {mostrarForm && (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            crear.mutate();
-          }}
-          className="mb-6 grid grid-cols-1 gap-3 rounded-xl bg-brand-surface p-4 sm:grid-cols-2"
-        >
-          <Input label="Usuario" value={form.username} onChange={(v) => setForm({ ...form, username: v })} />
-          <Input label="Contraseña" type="password" value={form.password} onChange={(v) => setForm({ ...form, password: v })} />
-          <Input label="Nombre" value={form.first_name} onChange={(v) => setForm({ ...form, first_name: v })} />
-          <Input label="Apellido" value={form.apellido} onChange={(v) => setForm({ ...form, apellido: v })} />
-          <Input label="DNI" value={form.dni} onChange={(v) => setForm({ ...form, dni: v })} />
-          <Input
-            label="Fecha de nacimiento"
-            type="date"
-            value={form.fecha_nacimiento}
-            onChange={(v) => setForm({ ...form, fecha_nacimiento: v })}
-          />
-          <Input label="Email" type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} />
-          <button
-            type="submit"
-            disabled={crear.isPending}
-            className="col-span-full rounded-lg bg-brand-accent py-2.5 font-semibold text-black disabled:opacity-50"
-          >
-            Guardar alumno
-          </button>
-        </form>
-      )}
-
-      {editandoId !== null && (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            editar.mutate();
-          }}
-          className="mb-6 grid grid-cols-1 gap-3 rounded-xl bg-brand-surface p-4 sm:grid-cols-2"
-        >
-          <h2 className="col-span-full text-sm font-semibold text-white/70">
-            Editando alumno #{editandoId}
-          </h2>
-          <Input label="Nombre" value={formEdicion.first_name} onChange={(v) => setFormEdicion({ ...formEdicion, first_name: v })} />
-          <Input label="Apellido" value={formEdicion.apellido} onChange={(v) => setFormEdicion({ ...formEdicion, apellido: v })} />
-          <Input label="DNI" value={formEdicion.dni} onChange={(v) => setFormEdicion({ ...formEdicion, dni: v })} />
-          <Input
-            label="Fecha de nacimiento"
-            type="date"
-            required={false}
-            value={formEdicion.fecha_nacimiento}
-            onChange={(v) => setFormEdicion({ ...formEdicion, fecha_nacimiento: v })}
-          />
-          <Input label="Email" type="email" value={formEdicion.email} onChange={(v) => setFormEdicion({ ...formEdicion, email: v })} />
-          <div className="col-span-full flex gap-3">
-            <button
-              type="submit"
-              disabled={editar.isPending}
-              className="rounded-lg bg-brand-accent px-4 py-2.5 font-semibold text-black disabled:opacity-50"
-            >
-              Guardar cambios
-            </button>
-            <button
-              type="button"
-              onClick={() => setEditandoId(null)}
-              className="rounded-lg px-4 py-2.5 text-sm text-white/60 hover:bg-white/5"
-            >
-              Cancelar
-            </button>
-          </div>
-        </form>
-      )}
-
       {/* Tabla */}
       <div className="overflow-x-auto rounded-xl bg-brand-surface">
         {isLoading ? (
@@ -264,12 +156,13 @@ export function AlumnosAdminPage() {
         ) : (
           <table className="w-full min-w-[760px] table-fixed text-left text-sm">
             <colgroup>
-              <col className="w-[26%]" />
-              <col className="w-[16%]" />
-              <col className="w-[16%]" />
+              <col className="w-[23%]" />
+              <col className="w-[13%]" />
               <col className="w-[14%]" />
-              <col className="w-[14%]" />
-              <col className="w-[14%]" />
+              <col className="w-[12%]" />
+              <col className="w-[12%]" />
+              <col className="w-[18%]" />
+              <col className="w-[8%]" />
             </colgroup>
             <thead>
               <tr className="border-b border-white/10 text-white/50">
@@ -278,13 +171,14 @@ export function AlumnosAdminPage() {
                 <th className="px-4 py-3 font-medium">F. nacimiento</th>
                 <th className="px-4 py-3 font-medium">Estado</th>
                 <th className="px-4 py-3 font-medium">Rutina</th>
-                <th className="px-4 py-3 font-medium">Editar datos</th>
+                <th className="px-4 py-3 font-medium">Profesor</th>
+                <th className="px-4 py-3 font-medium"></th>
               </tr>
             </thead>
             <tbody>
               {alumnos.map((a: any) => (
                 <tr key={a.id} className="border-b border-white/5 hover:bg-white/5">
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 align-middle">
                     <div className="flex items-center gap-2">
                       <div
                         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${colorAvatar(a.id)}`}
@@ -296,34 +190,32 @@ export function AlumnosAdminPage() {
                       </span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-white/70">{a.dni}</td>
-                  <td className="px-4 py-3 text-white/70">{formatearFecha(a.fecha_nacimiento)}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 align-middle text-white/70">{a.dni}</td>
+                  <td className="px-4 py-3 align-middle text-white/70">{formatearFecha(a.fecha_nacimiento)}</td>
+                  <td className="px-4 py-3 align-middle">
                     <Pill
                       texto={a.estado === "activo" ? "Activo" : "Inactivo"}
                       tono={a.estado === "activo" ? "accent" : "gris"}
                     />
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 align-middle">
                     <Pill texto={a.tiene_rutina ? "Asignada" : "Sin rutina"} tono={a.tiene_rutina ? "accent" : "gris"} />
                   </td>
-                  <td className="relative px-4 py-3">
+                  <td className="px-4 py-3 align-middle text-white/70">
+                    <span className={`truncate ${a.profesor_asignado_nombre ? "" : "text-white/35"}`}>
+                      {a.profesor_asignado_nombre ?? "Sin asignar"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 align-middle">
                     <button
-                      onClick={() => setMenuAbiertoId(menuAbiertoId === a.id ? null : a.id)}
-                      className="rounded px-2 py-1 text-white/50 hover:bg-white/10 hover:text-white"
+                      type="button"
+                      onClick={() => setFormulario({ alumno: a })}
+                      title="Editar alumno"
+                      aria-label={`Editar ${a.first_name} ${a.apellido}`}
+                      className="rounded-lg p-2 text-white/50 hover:bg-white/10 hover:text-white"
                     >
-                      ⋯
+                      <Pencil size={16} />
                     </button>
-                    {menuAbiertoId === a.id && (
-                      <div className="absolute right-4 top-10 z-10 w-32 rounded-lg bg-brand-bg py-1 shadow-lg ring-1 ring-white/10">
-                        <button
-                          onClick={() => abrirEdicion(a)}
-                          className="block w-full px-3 py-2 text-left text-sm hover:bg-white/5"
-                        >
-                          Editar
-                        </button>
-                      </div>
-                    )}
                   </td>
                 </tr>
               ))}
@@ -367,6 +259,144 @@ export function AlumnosAdminPage() {
           </div>
         </div>
       )}
+
+      {formulario && (
+        <FormAlumno
+          alumno={formulario.alumno}
+          profesores={profesores}
+          onCerrar={() => setFormulario(null)}
+          onGuardado={() => {
+            invalidar();
+            setFormulario(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function FormAlumno({
+  alumno,
+  profesores,
+  onCerrar,
+  onGuardado,
+}: {
+  alumno: any | null;
+  profesores: any[] | undefined;
+  onCerrar: () => void;
+  onGuardado: () => void;
+}) {
+  const editando = alumno !== null;
+  const [form, setForm] = useState({
+    username: alumno?.username ?? "",
+    password: "",
+    first_name: alumno?.first_name ?? "",
+    apellido: alumno?.apellido ?? "",
+    dni: alumno?.dni ?? "",
+    fecha_nacimiento: alumno?.fecha_nacimiento ?? "",
+    email: alumno?.email ?? "",
+    estado: alumno?.estado ?? "activo",
+    profesor_asignado: alumno?.profesor_asignado ? String(alumno.profesor_asignado) : "",
+  });
+
+  const guardar = useMutation({
+    mutationFn: () => {
+      const profesor_asignado = form.profesor_asignado || null;
+      if (editando) {
+        const { username, password, ...datos } = form;
+        return modificarUsuario(alumno.id, { ...datos, profesor_asignado });
+      }
+      return crearAlumno({ ...form, profesor_asignado });
+    },
+    onSuccess: onGuardado,
+  });
+
+  const campo =
+    "w-full rounded-lg bg-brand-bg px-3 py-2 text-sm outline-none ring-1 ring-white/10 focus:ring-brand-accent";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          guardar.mutate();
+        }}
+        className="max-h-[90vh] w-full max-w-md space-y-3 overflow-y-auto rounded-xl bg-brand-surface p-5"
+      >
+        <h2 className="text-lg font-bold">{editando ? "Editar alumno" : "Nuevo alumno"}</h2>
+
+        {!editando && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Input label="Usuario" value={form.username} onChange={(v) => setForm({ ...form, username: v })} />
+            <Input
+              label="Contraseña"
+              type="password"
+              value={form.password}
+              onChange={(v) => setForm({ ...form, password: v })}
+            />
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Input label="Nombre" value={form.first_name} onChange={(v) => setForm({ ...form, first_name: v })} />
+          <Input label="Apellido" value={form.apellido} onChange={(v) => setForm({ ...form, apellido: v })} />
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Input label="DNI" value={form.dni} onChange={(v) => setForm({ ...form, dni: v })} />
+          <Input
+            label="Fecha de nacimiento"
+            type="date"
+            required={!editando}
+            value={form.fecha_nacimiento}
+            onChange={(v) => setForm({ ...form, fecha_nacimiento: v })}
+          />
+        </div>
+
+        <Input label="Email" type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} />
+
+        <div className={`grid grid-cols-1 gap-3 ${editando ? "sm:grid-cols-2" : ""}`}>
+          {editando && (
+            <label className="block text-sm">
+              <span className="mb-1 block text-white/50">Estado</span>
+              <select
+                value={form.estado}
+                onChange={(e) => setForm({ ...form, estado: e.target.value })}
+                className={campo}
+              >
+                <option value="activo">Activo</option>
+                <option value="inactivo">Inactivo</option>
+              </select>
+            </label>
+          )}
+          <SelectorProfesor
+            valor={form.profesor_asignado}
+            profesores={profesores}
+            onChange={(v) => setForm({ ...form, profesor_asignado: v })}
+          />
+        </div>
+
+        {guardar.isError && (
+          <p className="text-sm text-red-400">No se pudo guardar el alumno. Revisá los datos e intentá de nuevo.</p>
+        )}
+
+        <div className="flex gap-3 pt-1">
+          <button
+            type="submit"
+            disabled={guardar.isPending}
+            className="flex-1 rounded-lg bg-brand-accent py-2.5 font-semibold text-black disabled:opacity-50"
+          >
+            {guardar.isPending ? "Guardando..." : editando ? "Guardar cambios" : "Guardar alumno"}
+          </button>
+          <button
+            type="button"
+            onClick={onCerrar}
+            className="rounded-lg px-4 py-2.5 text-sm text-white/60 hover:bg-white/5"
+          >
+            Cancelar
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
@@ -402,10 +432,38 @@ function Pill({ texto, tono }: { texto: string; tono: "accent" | "gris" }) {
   const clases =
     tono === "accent" ? "bg-brand-accent/20 text-brand-accent" : "bg-white/10 text-white/50";
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${clases}`}>
-      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+    <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${clases}`}>
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current" />
       {texto}
     </span>
+  );
+}
+
+function SelectorProfesor({
+  valor,
+  profesores,
+  onChange,
+}: {
+  valor: string;
+  profesores: any[] | undefined;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <label className="block text-sm">
+      <span className="mb-1 block text-white/50">Profesor asignado</span>
+      <select
+        value={valor}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg bg-brand-bg px-3 py-2 outline-none ring-1 ring-white/10 focus:ring-brand-accent"
+      >
+        <option value="">Sin asignar</option>
+        {(profesores ?? []).map((p: any) => (
+          <option key={p.id} value={p.id}>
+            {p.first_name} {p.apellido}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 

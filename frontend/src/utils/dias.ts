@@ -16,6 +16,36 @@ const POR_INDICE_JS: DiaCodigo[] = ["dom", "lun", "mar", "mie", "jue", "vie", "s
 
 export const diaDeHoy = (): DiaCodigo => POR_INDICE_JS[new Date().getDay()];
 
+function aISO(fecha: Date) {
+  const anio = fecha.getFullYear();
+  const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+  const dia = String(fecha.getDate()).padStart(2, "0");
+  return `${anio}-${mes}-${dia}`;
+}
+
+export const fechaDeHoyISO = () => aISO(new Date());
+
+export interface DiaConFecha {
+  codigo: DiaCodigo;
+  corto: string;
+  largo: string;
+  fecha: string; // ISO yyyy-mm-dd
+  numeroDia: number; // día del mes, para mostrar en la botonera
+}
+
+/** Lunes a domingo de la semana que contiene `referencia` (hoy por defecto). */
+export function semanaDe(referencia: Date = new Date()): DiaConFecha[] {
+  const lunes = new Date(referencia);
+  const diasDesdeElLunes = (lunes.getDay() + 6) % 7; // domingo (0) -> 6
+  lunes.setDate(lunes.getDate() - diasDesdeElLunes);
+
+  return DIAS.map((d, i) => {
+    const fecha = new Date(lunes);
+    fecha.setDate(lunes.getDate() + i);
+    return { ...d, fecha: aISO(fecha), numeroDia: fecha.getDate() };
+  });
+}
+
 interface ItemConDia {
   dia: string;
 }

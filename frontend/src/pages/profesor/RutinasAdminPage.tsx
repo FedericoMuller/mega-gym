@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil } from "lucide-react";
 import {
   listarAlumnos,
+  listarProfesores,
   listarRutinasDeAlumno,
   listarSeguimientoDeAlumno,
   modificarUsuario,
@@ -338,16 +339,23 @@ function PanelRutinaActual({
 
 function PanelDatos({ alumno, onGuardado }: { alumno: any; onGuardado: () => void }) {
   const [editando, setEditando] = useState(false);
+  const { data: profesores } = useQuery({
+    queryKey: ["admin-profesores-dropdown"],
+    queryFn: listarProfesores,
+  });
   const [form, setForm] = useState({
     first_name: alumno.first_name ?? "",
     apellido: alumno.apellido ?? "",
     dni: alumno.dni ?? "",
     fecha_nacimiento: alumno.fecha_nacimiento ?? "",
     email: alumno.email ?? "",
+    estado: alumno.estado ?? "activo",
+    profesor_asignado: alumno.profesor_asignado ? String(alumno.profesor_asignado) : "",
   });
 
   const guardar = useMutation({
-    mutationFn: () => modificarUsuario(alumno.id, form),
+    mutationFn: () =>
+      modificarUsuario(alumno.id, { ...form, profesor_asignado: form.profesor_asignado || null }),
     onSuccess: () => {
       onGuardado();
       setEditando(false);
@@ -361,6 +369,8 @@ function PanelDatos({ alumno, onGuardado }: { alumno: any; onGuardado: () => voi
         <FilaDato label="DNI" valor={alumno.dni} />
         <FilaDato label="Fecha de nacimiento" valor={formatearFecha(alumno.fecha_nacimiento)} />
         <FilaDato label="Email" valor={alumno.email || "-"} />
+        <FilaDato label="Estado" valor={alumno.estado === "activo" ? "Activo" : "Inactivo"} />
+        <FilaDato label="Profesor asignado" valor={alumno.profesor_asignado_nombre || "Sin asignar"} />
         <button
           onClick={() => setEditando(true)}
           className="mt-2 w-full rounded-lg bg-brand-accent py-2.5 text-sm font-semibold text-black"
@@ -389,6 +399,32 @@ function PanelDatos({ alumno, onGuardado }: { alumno: any; onGuardado: () => voi
         onChange={(v) => setForm({ ...form, fecha_nacimiento: v })}
       />
       <CampoEdicion label="Email" type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} />
+      <label className="block text-sm">
+        <span className="mb-1 block text-white/50">Estado</span>
+        <select
+          value={form.estado}
+          onChange={(e) => setForm({ ...form, estado: e.target.value })}
+          className="w-full rounded-lg bg-brand-bg px-3 py-2 outline-none ring-1 ring-white/10 focus:ring-brand-accent"
+        >
+          <option value="activo">Activo</option>
+          <option value="inactivo">Inactivo</option>
+        </select>
+      </label>
+      <label className="block text-sm">
+        <span className="mb-1 block text-white/50">Profesor asignado</span>
+        <select
+          value={form.profesor_asignado}
+          onChange={(e) => setForm({ ...form, profesor_asignado: e.target.value })}
+          className="w-full rounded-lg bg-brand-bg px-3 py-2 outline-none ring-1 ring-white/10 focus:ring-brand-accent"
+        >
+          <option value="">Sin asignar</option>
+          {(profesores ?? []).map((p: any) => (
+            <option key={p.id} value={p.id}>
+              {p.first_name} {p.apellido}
+            </option>
+          ))}
+        </select>
+      </label>
       <div className="flex gap-2 pt-1">
         <button
           type="submit"
