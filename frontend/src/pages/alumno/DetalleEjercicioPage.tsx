@@ -1,19 +1,30 @@
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { Ejercicio } from "@/api/rutinas";
+import { Check } from "lucide-react";
+import { alternarCompletado, type RutinaItem } from "@/api/rutinas";
 
 interface EstadoNavegacion {
-  ejercicio: Ejercicio;
-  series: number;
-  repeticiones: string;
+  item: RutinaItem;
+  fecha: string;
 }
 
 export function DetalleEjercicioPage() {
   const { state } = useLocation() as { state: EstadoNavegacion | null };
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { id } = useParams();
-  const ejercicio = state?.ejercicio;
+  const [completado, setCompletado] = useState(() => state?.item.completados.includes(state.fecha) ?? false);
 
-  if (!ejercicio) {
+  const alternar = useMutation({
+    mutationFn: () => alternarCompletado(state!.item.id, state!.fecha),
+    onSuccess: (data) => {
+      setCompletado(data.completado);
+      queryClient.invalidateQueries({ queryKey: ["rutinas"] });
+    },
+  });
+
+  if (!state) {
     return (
       <div className="text-white/60">
         No se encontró el ejercicio #{id}.{" "}
@@ -23,6 +34,9 @@ export function DetalleEjercicioPage() {
       </div>
     );
   }
+
+  const { item } = state;
+  const ejercicio = item.ejercicio;
 
   return (
     <div>
@@ -51,15 +65,22 @@ export function DetalleEjercicioPage() {
 
       <div className="space-y-2 rounded-xl bg-brand-surface p-4">
         <p>
-          🔁 {state.series} series ・ {state.repeticiones} repeticiones
+          🔁 {item.series} series ・ {item.repeticiones} repeticiones
         </p>
         {ejercicio.accesorios.length > 0 && (
           <p>🛠️ {ejercicio.accesorios.map((a) => a.descripcion).join(", ")}</p>
         )}
       </div>
 
-      <button className="mt-6 w-full rounded-lg bg-brand-accent py-3 font-semibold text-black">
-        Marcar como realizado
+      <button
+        onClick={() => alternar.mutate()}
+        disabled={alternar.isPending}
+        className={`mt-6 flex w-full items-center justify-center gap-2 rounded-lg py-3 font-semibold disabled:opacity-50 ${
+          completado ? "bg-white/10 text-white" : "bg-brand-accent text-black"
+        }`}
+      >
+        {completado && <Check size={18} strokeWidth={3} />}
+        {completado ? "Realizado" : "Marcar como realizado"}
       </button>
     </div>
   );

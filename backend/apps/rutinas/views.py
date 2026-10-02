@@ -1,9 +1,12 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.usuarios.permissions import EsProfesor
-from .models import TipoRutina, Rutina
+from .models import TipoRutina, Rutina, RutinaEjercicio, RutinaEjercicioCompletado
 from .serializers import TipoRutinaSerializer, RutinaSerializer, RutinaWriteSerializer
 
 
@@ -26,7 +29,9 @@ class RutinaViewSet(viewsets.ModelViewSet):
     persistir -> confirmar. Los pasos 2 y 3 (validar/reglas) se resuelven acá;
     si la app crece, migrar a una capa de servicios (services.py) separada del view.
     """
-    queryset = Rutina.objects.all().prefetch_related("items__ejercicio", "cronograma")
+    queryset = Rutina.objects.all().prefetch_related(
+        "items__ejercicio", "items__completados", "cronograma"
+    )
 
     def get_serializer_class(self):
         if self.action in ("create", "update", "partial_update"):
@@ -73,3 +78,22 @@ class RutinaViewSet(viewsets.ModelViewSet):
     def partial_update(self, request, *args, **kwargs):
         kwargs["partial"] = True
         return self.update(request, *args, **kwargs)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def alternar_completado(request, item_id):
+    """RF.13: el alumno marca/desmarca un ejercicio de su rutina como realizado en una fecha."""
+    item = get_object_or_404(RutinaEjercicio, pk=item_id)
+    if item.rutina.usuario_id != request.user.id:
+        raise PermissionDenied("Esta rutina no te pertenece.")
+
+    fecha = request.data.get("fecha")
+    if not fecha:
+        raise ValidationError({"fecha": "Este campo es obligatorio."})
+
+    completado, creado = RutinaEjercicioCompletado.objects.get_or_create(item=item, fecha=fecha)
+    if not creado:
+        completado.delete()
+        return Response({"completado": False})
+    return Response({"completado": True})

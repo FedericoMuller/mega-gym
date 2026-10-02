@@ -4,7 +4,7 @@ from django.db import transaction
 from rest_framework import serializers
 
 from apps.ejercicios.serializers import EjercicioSerializer
-from .models import TipoRutina, Rutina, RutinaEjercicio, Cronograma
+from .models import TipoRutina, Rutina, RutinaEjercicio, RutinaEjercicioCompletado, Cronograma
 
 PATRON_REPETICIONES = re.compile(r"^(\d{1,3})(?:-(\d{1,3}))?$")
 
@@ -22,12 +22,16 @@ class CronogramaSerializer(serializers.ModelSerializer):
 
 
 class RutinaEjercicioSerializer(serializers.ModelSerializer):
-    """Lectura: el ejercicio completo con su día, series y repeticiones."""
+    """Lectura: el ejercicio completo con su día, series, repeticiones y fechas completadas."""
     ejercicio = EjercicioSerializer(read_only=True)
+    completados = serializers.SerializerMethodField()
 
     class Meta:
         model = RutinaEjercicio
-        fields = ["id", "dia", "orden", "series", "repeticiones", "ejercicio"]
+        fields = ["id", "dia", "orden", "series", "repeticiones", "ejercicio", "completados"]
+
+    def get_completados(self, obj) -> list[str]:
+        return [c.fecha.isoformat() for c in obj.completados.all()]
 
 
 class RutinaSerializer(serializers.ModelSerializer):
