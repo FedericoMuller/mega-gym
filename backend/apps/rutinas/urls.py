@@ -4,6 +4,7 @@ from . import views
 
 router = DefaultRouter()
 router.register("tipos", views.TipoRutinaViewSet, basename="tipo-rutina")
+router.register("cronograma", views.CronogramaViewSet, basename="cronograma")
 router.register("", views.RutinaViewSet, basename="rutina")
 
 urlpatterns = [

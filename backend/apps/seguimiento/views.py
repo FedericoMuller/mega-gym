@@ -1,7 +1,10 @@
+from django.contrib.auth import get_user_model
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from .models import Seguimiento, LineaSeguimiento
 from .serializers import SeguimientoSerializer, LineaSeguimientoSerializer
+
+Usuario = get_user_model()
 
 
 class SeguimientoViewSet(viewsets.ModelViewSet):
@@ -24,7 +27,10 @@ class SeguimientoViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         # Si es alumno, el plan se asocia a sí mismo (RF.5)
-        usuario = self.request.data.get("usuario") if self.request.user.es_profesor else self.request.user
+        if self.request.user.es_profesor:
+            usuario = Usuario.objects.get(pk=self.request.data.get("usuario"))
+        else:
+            usuario = self.request.user
         serializer.save(usuario=usuario)
 
 

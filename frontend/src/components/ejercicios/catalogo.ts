@@ -25,15 +25,6 @@ export const TIPOS = [
   { valor: "aislamiento", label: "Aislamiento" },
 ];
 
-export const EQUIPAMIENTOS = [
-  { valor: "maquina", label: "Máquina" },
-  { valor: "mancuernas", label: "Mancuernas" },
-  { valor: "barra", label: "Barra" },
-  { valor: "polea", label: "Polea" },
-  { valor: "peso_corporal", label: "Peso corporal" },
-  { valor: "otro", label: "Otro" },
-];
-
 export const etiqueta = (lista: { valor: string; label: string }[], valor: string) =>
   lista.find((i) => i.valor === valor)?.label ?? "";
 
@@ -49,7 +40,10 @@ export function normalizar(texto: string) {
 
 export type Orden = "relevancia" | "az" | "za";
 
-/** Búsqueda, filtros y orden del catálogo (se resuelven en el cliente). */
+/**
+ * Búsqueda, filtros y orden del catálogo (se resuelven en el cliente).
+ * `equipos` filtra por accesorio (RF.9): cada ejercicio puede tener varios.
+ */
 export function useFiltroCatalogo(lista: any[]) {
   const [busqueda, setBusqueda] = useState("");
   const [categoria, setCategoria] = useState("");
@@ -64,7 +58,9 @@ export function useFiltroCatalogo(lista: any[]) {
 
   const conteoEquipos = useMemo(() => {
     const c: Record<string, number> = {};
-    lista.forEach((e) => (c[e.equipamiento] = (c[e.equipamiento] ?? 0) + 1));
+    lista.forEach((e) =>
+      (e.accesorios ?? []).forEach((a: any) => (c[a.id] = (c[a.id] ?? 0) + 1))
+    );
     return c;
   }, [lista]);
 
@@ -75,9 +71,8 @@ export function useFiltroCatalogo(lista: any[]) {
 
     const puntuar = (e: any) => {
       const nombre = normalizar(e.nombre_ejercicio);
-      const resto = normalizar(
-        `${etiqueta(CATEGORIAS, e.categoria)} ${etiqueta(TIPOS, e.tipo)} ${etiqueta(EQUIPAMIENTOS, e.equipamiento)}`
-      );
+      const accesorios = (e.accesorios ?? []).map((a: any) => a.descripcion).join(" ");
+      const resto = normalizar(`${etiqueta(CATEGORIAS, e.categoria)} ${etiqueta(TIPOS, e.tipo)} ${accesorios}`);
       const pajar = `${nombre} ${resto}`;
       if (!tokens.every((t) => pajar.includes(t))) return -1;
       if (!consulta) return 0;
@@ -90,7 +85,11 @@ export function useFiltroCatalogo(lista: any[]) {
 
     const filtrados = lista
       .filter((e) => !categoria || e.categoria === categoria)
-      .filter((e) => equipos.length === 0 || equipos.includes(e.equipamiento))
+      .filter(
+        (e) =>
+          equipos.length === 0 ||
+          (e.accesorios ?? []).some((a: any) => equipos.includes(String(a.id)))
+      )
       .map((e) => ({ e, puntaje: puntuar(e) }))
       .filter((x) => x.puntaje >= 0);
 

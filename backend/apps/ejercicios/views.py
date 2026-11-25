@@ -18,16 +18,17 @@ class SoloLecturaParaAlumno:
         return [IsAuthenticated()]
 
 
-class AccesorioViewSet(SoloLecturaParaAlumno, viewsets.ModelViewSet):
-    queryset = Accesorio.objects.all()
-    serializer_class = AccesorioSerializer
-
-
 class PaginacionEjercicios(PageNumberPagination):
     # El catálogo se filtra/ordena en el cliente: permite pedir todo en una sola página.
     page_size = 20
     page_size_query_param = "page_size"
     max_page_size = 500
+
+
+class AccesorioViewSet(SoloLecturaParaAlumno, viewsets.ModelViewSet):
+    queryset = Accesorio.objects.all().order_by("descripcion")
+    serializer_class = AccesorioSerializer
+    pagination_class = PaginacionEjercicios
 
 
 class EjercicioViewSet(SoloLecturaParaAlumno, viewsets.ModelViewSet):

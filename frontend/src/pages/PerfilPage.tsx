@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { API_URL } from "@/api/client";
+import { descargarCertificadoSocio } from "@/api/socios";
+import { ModalMensaje } from "@/components/ui/ModalMensaje";
 
 function formatearFecha(fecha: string | null) {
   if (!fecha) return "Sin fecha de nacimiento cargada";
@@ -16,6 +17,8 @@ export function PerfilPage() {
   );
   const [editando, setEditando] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const [descargandoCredencial, setDescargandoCredencial] = useState(false);
+  const [errorCredencial, setErrorCredencial] = useState<string | null>(null);
   const [form, setForm] = useState({
     first_name: usuario?.first_name ?? "",
     apellido: usuario?.apellido ?? "",
@@ -48,6 +51,33 @@ export function PerfilPage() {
       fecha_nacimiento: usuario.fecha_nacimiento ?? "",
     });
     setEditando(true);
+  }
+
+  async function descargarCredencial() {
+    setDescargandoCredencial(true);
+    try {
+      const blob = await descargarCertificadoSocio();
+      const url = URL.createObjectURL(blob);
+      const enlace = document.createElement("a");
+      enlace.href = url;
+      enlace.download = "constancia_socio_club_rivadavia.pdf";
+      enlace.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      if (err.response?.status === 404) {
+        setErrorCredencial(
+          "Su usuario no esta registrado como socio del club, por lo cual no es posible generar la constancia de socio activo"
+        );
+      } else if (err.response?.status === 403) {
+        setErrorCredencial(
+          "Su usuario esta registrado como socio inactivo del club, por lo cual no es posible generar la constancia de socio activo"
+        );
+      } else {
+        setErrorCredencial("No se pudo generar la credencial. Intentá de nuevo más tarde.");
+      }
+    } finally {
+      setDescargandoCredencial(false);
+    }
   }
 
   async function guardar(e: React.FormEvent) {
@@ -142,14 +172,14 @@ export function PerfilPage() {
       {!editando && (
         <div className="space-y-3">
           {usuario.rol === "alumno" && (
-            <a
-              href={`${API_URL}/socios/certificado/`}
-              target="_blank"
-              rel="noreferrer"
-              className="block w-full rounded-lg bg-brand-accent py-3 text-center font-semibold text-black"
+            <button
+              type="button"
+              onClick={descargarCredencial}
+              disabled={descargandoCredencial}
+              className="block w-full rounded-lg bg-brand-accent py-3 text-center font-semibold text-black disabled:opacity-50"
             >
-              Mi credencial
-            </a>
+              {descargandoCredencial ? "Generando..." : "Mi credencial"}
+            </button>
           )}
           <button
             type="button"
@@ -159,6 +189,14 @@ export function PerfilPage() {
             Editar datos
           </button>
         </div>
+      )}
+
+      {errorCredencial && (
+        <ModalMensaje
+          titulo="Credencial"
+          mensaje={errorCredencial}
+          onAceptar={() => setErrorCredencial(null)}
+        />
       )}
     </div>
   );

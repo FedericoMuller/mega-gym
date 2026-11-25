@@ -19,6 +19,7 @@ export function ModalConfirmacion({
   onConfirmar,
   onCancelar,
 }: Props) {
+  const textoCargando = `${textoConfirmar.replace(/ar$/i, "ando")}...`;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-6">
       <div className="w-full max-w-sm rounded-xl bg-brand-surface p-6 text-center shadow-lg">
@@ -43,7 +44,7 @@ export function ModalConfirmacion({
             disabled={cargando}
             className="flex-1 rounded-lg bg-red-500 py-2.5 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-50"
           >
-            {cargando ? "Eliminando..." : textoConfirmar}
+            {cargando ? textoCargando : textoConfirmar}
           </button>
         </div>
       </div>

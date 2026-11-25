@@ -66,9 +66,13 @@ export function DetalleEjercicioPage() {
       <div className="space-y-2 rounded-xl bg-brand-surface p-4">
         <p>
           🔁 {item.series} series ・ {item.repeticiones} repeticiones
+          {item.peso && ` ・ ${item.peso}`}
         </p>
         {ejercicio.accesorios.length > 0 && (
           <p>🛠️ {ejercicio.accesorios.map((a) => a.descripcion).join(", ")}</p>
+        )}
+        {ejercicio.maquinas?.length > 0 && (
+          <p>⚙️ {ejercicio.maquinas.map((m) => m.nombre_maquina).join(", ")}</p>
         )}
       </div>
 

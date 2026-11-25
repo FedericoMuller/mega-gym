@@ -77,6 +77,8 @@ class RutinaEjercicio(models.Model):
     orden = models.PositiveSmallIntegerField(default=0)
     series = models.PositiveSmallIntegerField()
     repeticiones = models.CharField(max_length=15)  # "10" o un rango, ej. "8-10"
+    # Opcional: hay ejercicios de peso corporal sin carga (ej. flexiones).
+    peso = models.CharField(max_length=15, blank=True)  # ej. "40kg" o "40-45kg"
 
     class Meta:
         ordering = ["orden", "id"]
