@@ -1,15 +1,26 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, ImagePlus, Pencil, Trash2 } from "lucide-react";
+import { ExternalLink, ImagePlus, Pencil, Plus, Trash2 } from "lucide-react";
 import {
+  actualizarAccesoriosEjercicio,
+  actualizarMaquinasEjercicio,
   crearEjercicio,
   eliminarEjercicio,
+  listarAccesorios,
   listarEjerciciosAdmin,
+  listarMaquinas,
   modificarEjercicio,
 } from "@/api/admin";
 import { ModalConfirmacion } from "@/components/ui/ModalConfirmacion";
-import { CATEGORIAS, EQUIPAMIENTOS, TIPOS, useFiltroCatalogo } from "@/components/ejercicios/catalogo";
-import { BarraResultados, ChipsEjercicio, Miniatura, PanelFiltros } from "@/components/ejercicios/piezas";
+import { CATEGORIAS, TIPOS, useFiltroCatalogo } from "@/components/ejercicios/catalogo";
+import {
+  BarraResultados,
+  ChipsEjercicio,
+  ListaAccesorios,
+  Miniatura,
+  ModalNuevoAccesorio,
+  PanelFiltros,
+} from "@/components/ejercicios/piezas";
 
 export function EjerciciosAdminPage() {
   const queryClient = useQueryClient();
@@ -172,13 +183,27 @@ function TarjetaEjercicio({
 function FormEjercicio({ ejercicio, onCerrar }: { ejercicio: any | null; onCerrar: () => void }) {
   const queryClient = useQueryClient();
   const editando = ejercicio !== null;
+  const { data: accesorios } = useQuery({
+    queryKey: ["accesorios"],
+    queryFn: listarAccesorios,
+  });
+  const [agregandoAccesorio, setAgregandoAccesorio] = useState(false);
   const [form, setForm] = useState({
     nombre_ejercicio: ejercicio?.nombre_ejercicio ?? "",
     categoria: ejercicio?.categoria ?? "",
     tipo: ejercicio?.tipo ?? "",
-    equipamiento: ejercicio?.equipamiento ?? "",
     url_ejercicio: ejercicio?.url_ejercicio ?? "",
   });
+  const [accesorioIds, setAccesorioIds] = useState<number[]>(
+    (ejercicio?.accesorios ?? []).map((a: any) => a.id)
+  );
+  const { data: maquinas } = useQuery({
+    queryKey: ["admin-maquinas"],
+    queryFn: listarMaquinas,
+  });
+  const [maquinaIds, setMaquinaIds] = useState<number[]>(
+    (ejercicio?.maquinas ?? []).map((m: any) => m.id)
+  );
   const [imagen, setImagen] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(ejercicio?.imagen ?? null);
 
@@ -192,15 +217,32 @@ function FormEjercicio({ ejercicio, onCerrar }: { ejercicio: any | null; onCerra
     return () => URL.revokeObjectURL(url);
   }, [imagen, ejercicio]);
 
+  function alternarAccesorio(id: number) {
+    setAccesorioIds((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]));
+  }
+
+  function alternarMaquina(id: number) {
+    setMaquinaIds((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]));
+  }
+
   const guardar = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const datos = new FormData();
       Object.entries(form).forEach(([clave, valor]) => {
         // Al editar se envían también los vacíos para poder borrar la URL.
         if (valor || editando) datos.append(clave, valor as string);
       });
       if (imagen) datos.append("imagen", imagen);
-      return editando ? modificarEjercicio(ejercicio.id, datos) : crearEjercicio(datos);
+      if (editando) {
+        const resultado = await modificarEjercicio(ejercicio.id, datos);
+        // Aparte y en JSON: por multipart no se puede distinguir "sin cambios" de "vaciar la lista".
+        await actualizarAccesoriosEjercicio(ejercicio.id, accesorioIds);
+        await actualizarMaquinasEjercicio(ejercicio.id, maquinaIds);
+        return resultado;
+      }
+      accesorioIds.forEach((id) => datos.append("accesorio_ids", String(id)));
+      maquinaIds.forEach((id) => datos.append("maquina_ids", String(id)));
+      return crearEjercicio(datos);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-ejercicios"] });
@@ -232,10 +274,57 @@ function FormEjercicio({ ejercicio, onCerrar }: { ejercicio: any | null; onCerra
           />
         </label>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <SelectCampo label="Categoría" valor={form.categoria} opciones={CATEGORIAS} onChange={(v) => setForm({ ...form, categoria: v })} clase={campo} />
           <SelectCampo label="Tipo" valor={form.tipo} opciones={TIPOS} onChange={(v) => setForm({ ...form, tipo: v })} clase={campo} />
-          <SelectCampo label="Equipamiento" valor={form.equipamiento} opciones={EQUIPAMIENTOS} onChange={(v) => setForm({ ...form, equipamiento: v })} clase={campo} />
+        </div>
+
+        <div>
+          <div className="mb-1 flex items-center justify-between">
+            <span className="text-sm text-white/50">Equipamiento</span>
+            <button
+              type="button"
+              onClick={() => setAgregandoAccesorio(true)}
+              aria-label="Agregar equipamiento o accesorio"
+              title="Agregar equipamiento o accesorio"
+              className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-accent text-black hover:brightness-110"
+            >
+              <Plus size={14} strokeWidth={3} />
+            </button>
+          </div>
+          <div className="max-h-32 overflow-y-auto rounded-lg bg-brand-bg p-2 ring-1 ring-white/10">
+            <ListaAccesorios
+              accesorios={accesorios}
+              estaSeleccionado={(id) => accesorioIds.includes(id)}
+              onAlternar={alternarAccesorio}
+            />
+          </div>
+        </div>
+
+        <div>
+          <span className="mb-1 block text-sm text-white/50">Máquinas</span>
+          <div className="max-h-32 overflow-y-auto rounded-lg bg-brand-bg p-2 ring-1 ring-white/10">
+            {(maquinas ?? []).length === 0 ? (
+              <p className="px-2 py-1.5 text-sm text-white/40">Todavía no hay máquinas cargadas.</p>
+            ) : (
+              <div className="space-y-0.5">
+                {maquinas.map((m: any) => (
+                  <label
+                    key={m.id}
+                    className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-white/80 hover:bg-white/5"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={maquinaIds.includes(m.id)}
+                      onChange={() => alternarMaquina(m.id)}
+                      className="checkbox-brand shrink-0"
+                    />
+                    <span className="truncate">{m.nombre_maquina}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         <label className="block text-sm">
@@ -291,6 +380,16 @@ function FormEjercicio({ ejercicio, onCerrar }: { ejercicio: any | null; onCerra
           </button>
         </div>
       </form>
+
+      {agregandoAccesorio && (
+        <ModalNuevoAccesorio
+          onCerrar={() => setAgregandoAccesorio(false)}
+          onCreado={() => {
+            queryClient.invalidateQueries({ queryKey: ["accesorios"] });
+            setAgregandoAccesorio(false);
+          }}
+        />
+      )}
     </div>
   );
 }

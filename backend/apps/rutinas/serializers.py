@@ -28,7 +28,7 @@ class RutinaEjercicioSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RutinaEjercicio
-        fields = ["id", "dia", "orden", "series", "repeticiones", "ejercicio", "completados"]
+        fields = ["id", "dia", "orden", "series", "repeticiones", "peso", "ejercicio", "completados"]
 
     def get_completados(self, obj) -> list[str]:
         return [c.fecha.isoformat() for c in obj.completados.all()]
@@ -52,9 +52,13 @@ class RutinaSerializer(serializers.ModelSerializer):
 
 
 class RutinaEjercicioWriteSerializer(serializers.ModelSerializer):
+    # RF.10: peso del ejercicio dentro de esa rutina. Opcional (ej. ejercicios
+    # de peso corporal como flexiones no llevan carga).
+    peso = serializers.CharField(max_length=15, required=False, allow_blank=True)
+
     class Meta:
         model = RutinaEjercicio
-        fields = ["ejercicio", "dia", "series", "repeticiones"]
+        fields = ["ejercicio", "dia", "series", "repeticiones", "peso"]
 
     def validate_series(self, valor):
         if not 1 <= valor <= 20:
@@ -70,6 +74,9 @@ class RutinaEjercicioWriteSerializer(serializers.ModelSerializer):
         if int(minimo) < 1 or (maximo is not None and int(maximo) < int(minimo)):
             raise serializers.ValidationError("Las repeticiones no son válidas.")
         return valor
+
+    def validate_peso(self, valor):
+        return valor.strip()
 
 
 class RutinaWriteSerializer(serializers.ModelSerializer):

@@ -224,8 +224,9 @@ function FilaEjercicio({ item, fecha }: { item: RutinaItem; fecha: string }) {
           {categoriaTipo && <p className="truncate text-xs text-white/50">{categoriaTipo}</p>}
         </div>
       </button>
-      <span className="shrink-0 text-sm font-semibold text-brand-accent">
+      <span className="shrink-0 text-right text-sm font-semibold text-brand-accent">
         {item.series} x {item.repeticiones}
+        {item.peso && <span className="block text-xs font-normal text-white/50">{item.peso}</span>}
       </span>
       <button
         onClick={() => alternar.mutate()}

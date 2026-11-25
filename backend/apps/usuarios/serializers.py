@@ -60,4 +60,4 @@ class ComentarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comentario
         fields = ["id", "usuario", "comentario", "fecha"]
-        read_only_fields = ["id", "fecha"]
+        read_only_fields = ["id", "usuario", "fecha"]

@@ -21,6 +21,8 @@ CAMPOS_AUTOEDITABLES_ALUMNO = {"first_name", "apellido", "fecha_nacimiento"}
 
 class PaginacionUsuarios(PageNumberPagination):
     page_size = 12
+    page_size_query_param = "page_size"
+    max_page_size = 500
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):
@@ -115,7 +117,11 @@ class ComentarioViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.es_profesor:
-            return Comentario.objects.all()
+            qs = Comentario.objects.all()
+            usuario_id = self.request.query_params.get("usuario")
+            if usuario_id:
+                qs = qs.filter(usuario_id=usuario_id)
+            return qs
         return Comentario.objects.filter(usuario=user)
 
     def perform_create(self, serializer):

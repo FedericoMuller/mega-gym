@@ -6,8 +6,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.usuarios.permissions import EsProfesor
-from .models import TipoRutina, Rutina, RutinaEjercicio, RutinaEjercicioCompletado
-from .serializers import TipoRutinaSerializer, RutinaSerializer, RutinaWriteSerializer
+from .models import TipoRutina, Rutina, RutinaEjercicio, RutinaEjercicioCompletado, Cronograma
+from .serializers import TipoRutinaSerializer, RutinaSerializer, RutinaWriteSerializer, CronogramaSerializer
 
 
 class TipoRutinaViewSet(viewsets.ModelViewSet):
@@ -19,6 +19,25 @@ class TipoRutinaViewSet(viewsets.ModelViewSet):
         if self.request.method not in ("GET", "HEAD", "OPTIONS"):
             return [EsProfesor()]
         return [IsAuthenticated()]
+
+
+class CronogramaViewSet(viewsets.ModelViewSet):
+    """RF.16, RF.17: cronograma de una rutina (día, enfoque)."""
+    serializer_class = CronogramaSerializer
+
+    def get_permissions(self):
+        if self.request.method not in ("GET", "HEAD", "OPTIONS"):
+            return [EsProfesor()]
+        return [IsAuthenticated()]
+
+    def get_queryset(self):
+        qs = Cronograma.objects.all()
+        if not self.request.user.es_profesor:
+            qs = qs.filter(rutina__usuario=self.request.user)
+        rutina_id = self.request.query_params.get("rutina")
+        if rutina_id:
+            qs = qs.filter(rutina_id=rutina_id)
+        return qs
 
 
 class RutinaViewSet(viewsets.ModelViewSet):

@@ -18,3 +18,4 @@ class SeguimientoSerializer(serializers.ModelSerializer):
             "id", "usuario", "objetivo", "fecha_inicio", "fecha_objetivo",
             "peso_actual", "peso_objetivo", "lineas",
         ]
+        read_only_fields = ["id", "usuario"]

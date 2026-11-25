@@ -1,7 +1,13 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronUp, ClipboardList, Dumbbell, Minus, Plus, Trash2, X } from "lucide-react";
-import { crearRutina, modificarRutina } from "@/api/admin";
+import {
+  crearRutina,
+  crearTipoRutina,
+  listarSeguimientoDeAlumno,
+  listarTiposRutina,
+  modificarRutina,
+} from "@/api/admin";
 import { SelectorEjercicios } from "@/components/ejercicios/SelectorEjercicios";
 import { ChipsEjercicio, Miniatura } from "@/components/ejercicios/piezas";
 import { DIAS, nombreDia, type DiaCodigo } from "@/utils/dias";
@@ -11,11 +17,15 @@ interface ItemForm {
   dia: DiaCodigo;
   series: number;
   repeticiones: string;
+  peso: string;
 }
 
 const SERIES_POR_DEFECTO = 3;
 const REPETICIONES_POR_DEFECTO = "10";
 const MAX_DESCRIPCION = 200;
+// Misma altura para el stepper de series y los campos de repeticiones/peso,
+// para que las tres cajas queden iguales aunque una tenga botones y otra no.
+const ALTO_CAMPO = "h-9";
 
 function repeticionesValidas(valor: string) {
   const m = valor.replace(/\s/g, "").match(/^(\d{1,3})(?:-(\d{1,3}))?$/);
@@ -44,6 +54,7 @@ interface Props {
 }
 
 export function FormRutina({ usuarioId, alumnoNombre, rutina, onCerrar, onGuardada }: Props) {
+  const queryClient = useQueryClient();
   const editando = rutina !== null;
 
   const [form, setForm] = useState({
@@ -52,6 +63,17 @@ export function FormRutina({ usuarioId, alumnoNombre, rutina, onCerrar, onGuarda
     fecha_inicio: rutina?.fecha_inicio ?? new Date().toISOString().slice(0, 10),
     nivel: rutina?.nivel ?? "adaptativo",
     estado: rutina?.estado ?? "activa",
+    tipo_rutina: rutina?.tipo_rutina?.id ? String(rutina.tipo_rutina.id) : "",
+    plan_seguimiento: rutina?.plan_seguimiento ? String(rutina.plan_seguimiento) : "",
+  });
+  const { data: tiposRutina } = useQuery({
+    queryKey: ["tipos-rutina"],
+    queryFn: listarTiposRutina,
+  });
+  const [agregandoTipo, setAgregandoTipo] = useState(false);
+  const { data: planesSeguimiento } = useQuery({
+    queryKey: ["seguimiento-de-alumno", usuarioId],
+    queryFn: () => listarSeguimientoDeAlumno(usuarioId),
   });
   const [items, setItems] = useState<ItemForm[]>(
     (rutina?.items ?? []).map((i: any) => ({
@@ -59,6 +81,7 @@ export function FormRutina({ usuarioId, alumnoNombre, rutina, onCerrar, onGuarda
       dia: i.dia,
       series: i.series,
       repeticiones: i.repeticiones,
+      peso: i.peso ?? "",
     }))
   );
   const [dia, setDia] = useState<DiaCodigo>(
@@ -81,7 +104,7 @@ export function FormRutina({ usuarioId, alumnoNombre, rutina, onCerrar, onGuarda
     setErrores([]);
     setItems((prev) => [
       ...prev,
-      { ejercicio, dia, series: SERIES_POR_DEFECTO, repeticiones: REPETICIONES_POR_DEFECTO },
+      { ejercicio, dia, series: SERIES_POR_DEFECTO, repeticiones: REPETICIONES_POR_DEFECTO, peso: "" },
     ]);
   }
 
@@ -108,11 +131,14 @@ export function FormRutina({ usuarioId, alumnoNombre, rutina, onCerrar, onGuarda
       const datos = {
         usuario: usuarioId,
         ...form,
+        tipo_rutina: form.tipo_rutina ? Number(form.tipo_rutina) : null,
+        plan_seguimiento: form.plan_seguimiento ? Number(form.plan_seguimiento) : null,
         items: items.map((i) => ({
           ejercicio: i.ejercicio.id,
           dia: i.dia,
           series: i.series,
           repeticiones: i.repeticiones.replace(/\s/g, ""),
+          peso: i.peso.trim(),
         })),
       };
       return editando ? modificarRutina(rutina.id, datos) : crearRutina(datos);
@@ -266,6 +292,51 @@ export function FormRutina({ usuarioId, alumnoNombre, rutina, onCerrar, onGuarda
                   </select>
                 </label>
               </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <span className="text-sm text-white/70">Tipo de rutina (opcional)</span>
+                    <button
+                      type="button"
+                      onClick={() => setAgregandoTipo(true)}
+                      aria-label="Agregar tipo de rutina"
+                      title="Agregar tipo de rutina"
+                      className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-accent text-black hover:brightness-110"
+                    >
+                      <Plus size={14} strokeWidth={3} />
+                    </button>
+                  </div>
+                  <select
+                    value={form.tipo_rutina}
+                    onChange={(e) => setForm({ ...form, tipo_rutina: e.target.value })}
+                    className={campo}
+                  >
+                    <option value="">Sin especificar</option>
+                    {(tiposRutina ?? []).map((t: any) => (
+                      <option key={t.id} value={t.id}>
+                        {t.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <label className="block text-sm">
+                  <span className="mb-1.5 block text-white/70">Plan de seguimiento (opcional)</span>
+                  <select
+                    value={form.plan_seguimiento}
+                    onChange={(e) => setForm({ ...form, plan_seguimiento: e.target.value })}
+                    className={campo}
+                  >
+                    <option value="">Sin vincular</option>
+                    {(planesSeguimiento ?? []).map((p: any) => (
+                      <option key={p.id} value={p.id}>
+                        {p.objetivo} ({p.peso_actual}kg → {p.peso_objetivo}kg)
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
             </section>
 
             {/* Ejercicios del día seleccionado */}
@@ -315,24 +386,28 @@ export function FormRutina({ usuarioId, alumnoNombre, rutina, onCerrar, onGuarda
                             <ChipsEjercicio ejercicio={item.ejercicio} />
                           </div>
 
-                          <div className="flex items-end gap-4">
+                          <div className="flex items-end gap-3">
                             <div>
                               <span className="mb-1 block text-xs text-white/50">Series</span>
-                              <div className="flex items-center overflow-hidden rounded-lg bg-brand-surface ring-1 ring-white/10">
+                              <div
+                                className={`flex ${ALTO_CAMPO} items-stretch overflow-hidden rounded-lg bg-brand-surface ring-1 ring-white/10`}
+                              >
                                 <button
                                   type="button"
                                   aria-label={`Menos series de ${item.ejercicio.nombre_ejercicio}`}
                                   onClick={() => actualizar(item, { series: Math.max(1, item.series - 1) })}
-                                  className="px-2.5 py-2 text-white/70 hover:bg-white/10"
+                                  className="flex items-center px-2.5 text-white/70 hover:bg-white/10"
                                 >
                                   <Minus size={14} />
                                 </button>
-                                <span className="w-8 text-center text-sm font-medium">{item.series}</span>
+                                <span className="flex w-8 items-center justify-center text-sm font-medium">
+                                  {item.series}
+                                </span>
                                 <button
                                   type="button"
                                   aria-label={`Más series de ${item.ejercicio.nombre_ejercicio}`}
                                   onClick={() => actualizar(item, { series: Math.min(20, item.series + 1) })}
-                                  className="px-2.5 py-2 text-white/70 hover:bg-white/10"
+                                  className="flex items-center px-2.5 text-white/70 hover:bg-white/10"
                                 >
                                   <Plus size={14} />
                                 </button>
@@ -347,11 +422,23 @@ export function FormRutina({ usuarioId, alumnoNombre, rutina, onCerrar, onGuarda
                                 placeholder="8-10"
                                 maxLength={9}
                                 aria-label={`Repeticiones de ${item.ejercicio.nombre_ejercicio}`}
-                                className={`w-24 rounded-lg bg-brand-surface px-3 py-2 text-center text-sm outline-none ring-1 ${
+                                className={`${ALTO_CAMPO} w-20 rounded-lg bg-brand-surface px-3 text-center text-sm outline-none ring-1 ${
                                   item.repeticiones && !repeticionesValidas(item.repeticiones)
                                     ? "ring-red-500/70"
                                     : "ring-white/10 focus:ring-brand-accent"
                                 }`}
+                              />
+                            </div>
+
+                            <div>
+                              <span className="mb-1 block text-xs text-white/50">Peso</span>
+                              <input
+                                value={item.peso}
+                                onChange={(e) => actualizar(item, { peso: e.target.value })}
+                                placeholder="40kg"
+                                maxLength={15}
+                                aria-label={`Peso de ${item.ejercicio.nombre_ejercicio}`}
+                                className={`${ALTO_CAMPO} w-20 rounded-lg bg-brand-surface px-3 text-center text-sm outline-none ring-1 ring-white/10 focus:ring-brand-accent`}
                               />
                             </div>
                           </div>
@@ -445,6 +532,76 @@ export function FormRutina({ usuarioId, alumnoNombre, rutina, onCerrar, onGuarda
           onCerrar={() => setSelector(false)}
         />
       )}
+
+      {agregandoTipo && (
+        <ModalNuevoTipoRutina
+          onCerrar={() => setAgregandoTipo(false)}
+          onCreado={(tipo) => {
+            queryClient.invalidateQueries({ queryKey: ["tipos-rutina"] });
+            setForm((f) => ({ ...f, tipo_rutina: String(tipo.id) }));
+            setAgregandoTipo(false);
+          }}
+        />
+      )}
     </>
+  );
+}
+
+function ModalNuevoTipoRutina({
+  onCerrar,
+  onCreado,
+}: {
+  onCerrar: () => void;
+  onCreado: (tipo: any) => void;
+}) {
+  const [nombre, setNombre] = useState("");
+
+  const guardar = useMutation({
+    mutationFn: () => crearTipoRutina(nombre.trim()),
+    onSuccess: onCreado,
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          guardar.mutate();
+        }}
+        className="w-full max-w-sm space-y-3 rounded-xl bg-brand-surface p-5"
+      >
+        <h2 className="text-lg font-bold">Nuevo tipo de rutina</h2>
+        <label className="block text-sm">
+          <span className="mb-1 block text-white/50">Nombre</span>
+          <input
+            autoFocus
+            required
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            placeholder="Ej: Hipertrofia"
+            className="w-full rounded-lg bg-brand-bg px-3 py-2 text-sm outline-none ring-1 ring-white/10 focus:ring-brand-accent"
+          />
+        </label>
+
+        {guardar.isError && <p className="text-sm text-red-400">No se pudo guardar. Intentá de nuevo.</p>}
+
+        <div className="flex gap-3 pt-1">
+          <button
+            type="submit"
+            disabled={guardar.isPending}
+            className="flex-1 rounded-lg bg-brand-accent py-2.5 text-sm font-semibold text-black disabled:opacity-50"
+          >
+            {guardar.isPending ? "Guardando..." : "Guardar"}
+          </button>
+          <button
+            type="button"
+            onClick={onCerrar}
+            className="rounded-lg px-4 py-2.5 text-sm text-white/60 hover:bg-white/5"
+          >
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }

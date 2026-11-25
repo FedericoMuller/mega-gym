@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Dumbbell, ExternalLink, Pencil, X } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Dumbbell, ExternalLink, Pencil, Trash2, X } from "lucide-react";
+import { crearCronograma, eliminarCronograma, listarCronograma } from "@/api/admin";
 import {
   CATEGORIAS,
   COLOR_CATEGORIA,
   COLOR_SIN_CATEGORIA,
-  EQUIPAMIENTOS,
   TIPOS,
   etiqueta,
 } from "@/components/ejercicios/catalogo";
@@ -67,6 +68,11 @@ export function DetalleRutinaModal({ rutina, alumnoNombre, onCerrar, onEditar }:
         <div className="min-h-0 flex-1 overflow-y-auto p-5">
           <div className="mb-4 rounded-xl border border-white/10 bg-brand-surface p-3 text-sm">
             <div className="flex flex-wrap gap-x-5 gap-y-1 text-white/70">
+              {rutina.tipo_rutina && (
+                <span>
+                  <span className="text-white/40">Tipo:</span> {rutina.tipo_rutina.nombre}
+                </span>
+              )}
               <span>
                 <span className="text-white/40">Nivel:</span> {NIVEL_LABEL[rutina.nivel] ?? rutina.nivel}
               </span>
@@ -121,7 +127,6 @@ export function DetalleRutinaModal({ rutina, alumnoNombre, onCerrar, onEditar }:
                   const color = COLOR_CATEGORIA[e.categoria] ?? COLOR_SIN_CATEGORIA;
                   const categoria = etiqueta(CATEGORIAS, e.categoria);
                   const tipo = etiqueta(TIPOS, e.tipo);
-                  const equipo = etiqueta(EQUIPAMIENTOS, e.equipamiento);
                   return (
                     <li
                       key={item.id}
@@ -141,17 +146,20 @@ export function DetalleRutinaModal({ rutina, alumnoNombre, onCerrar, onEditar }:
                               {categoria}
                             </span>
                           )}
-                          {equipo && (
-                            <span className="rounded-md bg-white/10 px-2 py-0.5 text-[11px] font-medium text-white/70">
-                              {equipo}
-                            </span>
-                          )}
                           {(e.accesorios ?? []).map((a: any) => (
                             <span
                               key={a.id}
                               className="rounded-md bg-white/10 px-2 py-0.5 text-[11px] font-medium text-white/70"
                             >
                               {a.descripcion}
+                            </span>
+                          ))}
+                          {(e.maquinas ?? []).map((m: any) => (
+                            <span
+                              key={`maquina-${m.id}`}
+                              className="rounded-md bg-white/10 px-2 py-0.5 text-[11px] font-medium text-white/70"
+                            >
+                              {m.nombre_maquina}
                             </span>
                           ))}
                           {e.url_ejercicio && (
@@ -170,6 +178,7 @@ export function DetalleRutinaModal({ rutina, alumnoNombre, onCerrar, onEditar }:
                       <div className="flex gap-3">
                         <ValorFijo titulo="Series" valor={String(item.series)} />
                         <ValorFijo titulo="Repeticiones" valor={item.repeticiones.replace("-", " - ")} ancho="min-w-[92px]" />
+                        {item.peso && <ValorFijo titulo="Peso" valor={item.peso} />}
                       </div>
                     </li>
                   );
@@ -177,6 +186,8 @@ export function DetalleRutinaModal({ rutina, alumnoNombre, onCerrar, onEditar }:
               </ul>
             </>
           )}
+
+          <PanelCronograma rutinaId={rutina.id} />
         </div>
 
         <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 px-5 py-3">
@@ -202,6 +213,94 @@ export function DetalleRutinaModal({ rutina, alumnoNombre, onCerrar, onEditar }:
           </div>
         </footer>
       </div>
+    </div>
+  );
+}
+
+function PanelCronograma({ rutinaId }: { rutinaId: number }) {
+  const queryClient = useQueryClient();
+  const { data: cronograma, isLoading } = useQuery({
+    queryKey: ["cronograma", rutinaId],
+    queryFn: () => listarCronograma(rutinaId),
+  });
+  const [dia, setDia] = useState("");
+  const [enfoque, setEnfoque] = useState("");
+
+  const agregar = useMutation({
+    mutationFn: () => crearCronograma({ rutina: rutinaId, dia: dia.trim(), enfoque: enfoque.trim() }),
+    onSuccess: () => {
+      setDia("");
+      setEnfoque("");
+      queryClient.invalidateQueries({ queryKey: ["cronograma", rutinaId] });
+    },
+  });
+
+  const eliminar = useMutation({
+    mutationFn: (id: number) => eliminarCronograma(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cronograma", rutinaId] }),
+  });
+
+  return (
+    <div className="mt-4 rounded-xl border border-white/10 bg-brand-surface p-3">
+      <h3 className="mb-2 text-sm font-semibold text-white/70">Cronograma</h3>
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (dia.trim() && enfoque.trim()) agregar.mutate();
+        }}
+        className="mb-3 flex flex-wrap gap-2"
+      >
+        <input
+          value={dia}
+          onChange={(e) => setDia(e.target.value)}
+          placeholder="Día (ej: Lunes)"
+          required
+          className="min-w-[120px] flex-1 rounded-lg bg-brand-bg px-3 py-2 text-sm outline-none ring-1 ring-white/10 focus:ring-brand-accent"
+        />
+        <input
+          value={enfoque}
+          onChange={(e) => setEnfoque(e.target.value)}
+          placeholder="Enfoque (ej: Espalda)"
+          required
+          className="min-w-[120px] flex-1 rounded-lg bg-brand-bg px-3 py-2 text-sm outline-none ring-1 ring-white/10 focus:ring-brand-accent"
+        />
+        <button
+          type="submit"
+          disabled={agregar.isPending}
+          className="rounded-lg bg-brand-accent px-3 py-2 text-sm font-semibold text-black disabled:opacity-50"
+        >
+          + Agregar
+        </button>
+      </form>
+
+      {isLoading ? (
+        <p className="text-sm text-white/50">Cargando...</p>
+      ) : !cronograma?.length ? (
+        <p className="text-sm text-white/40">Sin entradas de cronograma todavía.</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {cronograma.map((c: any) => (
+            <li
+              key={c.id}
+              className="group flex items-center justify-between rounded-lg bg-brand-bg px-3 py-2 text-sm"
+            >
+              <span>
+                <span className="font-medium">{c.dia}</span>
+                <span className="text-white/50"> · {c.enfoque}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => eliminar.mutate(c.id)}
+                aria-label={`Quitar ${c.dia} - ${c.enfoque}`}
+                className="rounded p-1 text-white/40 opacity-0 transition-opacity hover:bg-red-500/15 hover:text-red-400 group-hover:opacity-100"
+              >
+                <Trash2 size={14} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

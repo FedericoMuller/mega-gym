@@ -15,6 +15,7 @@ import { RutinasAdminPage } from "@/pages/profesor/RutinasAdminPage";
 import { EjerciciosAdminPage } from "@/pages/profesor/EjerciciosAdminPage";
 import { MaquinasAdminPage } from "@/pages/profesor/MaquinasAdminPage";
 import { ProfesoresAdminPage } from "@/pages/profesor/ProfesoresAdminPage";
+import { SociosAdminPage } from "@/pages/profesor/SociosAdminPage";
 
 function InicioRedirect() {
   const { usuario } = useAuth();
@@ -95,6 +96,14 @@ export default function App() {
           element={
             <RutaProtegida rolRequerido="profesor">
               <MaquinasAdminPage />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="/admin/socios"
+          element={
+            <RutaProtegida rolRequerido="profesor">
+              <SociosAdminPage />
             </RutaProtegida>
           }
         />

@@ -7,8 +7,8 @@ export interface Ejercicio {
   imagen: string | null;
   categoria: string;
   tipo: string;
-  equipamiento: string;
   accesorios: { id: number; descripcion: string }[];
+  maquinas: { id: number; nombre_maquina: string }[];
 }
 
 // Un ejercicio de la rutina para un día de la semana, con sus series y repeticiones.
@@ -18,6 +18,7 @@ export interface RutinaItem {
   orden: number;
   series: number;
   repeticiones: string;
+  peso: string;
   ejercicio: Ejercicio;
   completados: string[]; // fechas (ISO) en las que el alumno lo marcó como realizado
 }

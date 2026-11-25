@@ -8,6 +8,7 @@ import {
   listarSeguimientoDeAlumno,
   modificarUsuario,
 } from "@/api/admin";
+import { listarComentarios } from "@/api/comentarios";
 import { agruparPorDia } from "@/utils/dias";
 import { NIVEL_LABEL, formatearFecha } from "@/utils/formato";
 import { DetalleRutinaModal } from "./DetalleRutinaModal";
@@ -37,7 +38,7 @@ export function RutinasAdminPage() {
   const [busqueda, setBusqueda] = useState("");
   const [estadoFiltro, setEstadoFiltro] = useState("");
   const [alumnoId, setAlumnoId] = useState<number | null>(null);
-  const [tab, setTab] = useState<"rutinas" | "datos" | "historial">("rutinas");
+  const [tab, setTab] = useState<"rutinas" | "datos" | "historial" | "comentarios">("rutinas");
   // null = cerrado; { rutina: null } = nueva rutina; { rutina } = edición
   const [formRutina, setFormRutina] = useState<{ rutina: any | null } | null>(null);
   const [rutinaDetalleId, setRutinaDetalleId] = useState<number | null>(null);
@@ -202,7 +203,7 @@ export function RutinasAdminPage() {
               </div>
 
               <div className="mb-4 flex gap-1 border-b border-white/10 text-sm">
-                {(["rutinas", "datos", "historial"] as const).map((t) => (
+                {(["rutinas", "datos", "historial", "comentarios"] as const).map((t) => (
                   <button
                     key={t}
                     onClick={() => {
@@ -233,6 +234,8 @@ export function RutinasAdminPage() {
               } />}
 
               {tab === "historial" && <PanelHistorial alumnoId={alumno.id} />}
+
+              {tab === "comentarios" && <PanelComentarios alumnoId={alumno.id} />}
             </>
           )}
         </div>
@@ -477,6 +480,27 @@ function PanelHistorial({ alumnoId }: { alumnoId: number }) {
         </div>
       ))}
     </div>
+  );
+}
+
+function PanelComentarios({ alumnoId }: { alumnoId: number }) {
+  const { data: comentarios, isLoading } = useQuery({
+    queryKey: ["comentarios-de-alumno", alumnoId],
+    queryFn: () => listarComentarios(alumnoId),
+  });
+
+  if (isLoading) return <p className="text-white/50">Cargando...</p>;
+  if (!comentarios?.length) return <p className="text-white/50">Este alumno todavía no dejó comentarios.</p>;
+
+  return (
+    <ul className="space-y-2 text-sm">
+      {comentarios.map((c) => (
+        <li key={c.id} className="rounded-lg bg-brand-bg p-3">
+          <p className="mb-1 text-xs text-white/50">{formatearFecha(c.fecha)}</p>
+          <p className="text-white/80">{c.comentario}</p>
+        </li>
+      ))}
+    </ul>
   );
 }
 

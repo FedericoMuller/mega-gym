@@ -5,6 +5,8 @@ import {
   listarSeguimiento,
   modificarSeguimiento,
 } from "@/api/seguimiento";
+import { crearComentario, listarComentarios } from "@/api/comentarios";
+import { formatearFecha } from "@/utils/formato";
 
 const OBJETIVOS = [
   { value: "perdida_peso", label: "Pérdida de peso" },
@@ -111,6 +113,73 @@ export function SeguimientoPage() {
           {plan ? "Guardar cambios" : "Nuevo plan de seguimiento"}
         </button>
       </form>
+
+      <PanelComentarios />
+    </div>
+  );
+}
+
+function PanelComentarios() {
+  const queryClient = useQueryClient();
+  const { data: comentarios, isLoading } = useQuery({
+    queryKey: ["mis-comentarios"],
+    queryFn: () => listarComentarios(),
+  });
+  const [texto, setTexto] = useState("");
+
+  const guardar = useMutation({
+    mutationFn: () => crearComentario(texto.trim()),
+    onSuccess: () => {
+      setTexto("");
+      queryClient.invalidateQueries({ queryKey: ["mis-comentarios"] });
+    },
+  });
+
+  return (
+    <div className="mt-8">
+      <h2 className="mb-3 text-lg font-bold">Comentarios</h2>
+      <p className="mb-3 text-sm text-white/50">
+        Dejale una nota a tu profesor sobre cómo vas con tu entrenamiento.
+      </p>
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (texto.trim()) guardar.mutate();
+        }}
+        className="mb-4 flex gap-2"
+      >
+        <input
+          type="text"
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          placeholder="Escribí un comentario..."
+          required
+          className="flex-1 rounded-lg bg-brand-surface px-4 py-2.5 text-sm placeholder-white/40 outline-none ring-1 ring-white/10 focus:ring-brand-accent"
+        />
+        <button
+          type="submit"
+          disabled={guardar.isPending}
+          className="rounded-lg bg-brand-accent px-4 py-2.5 text-sm font-semibold text-black disabled:opacity-50"
+        >
+          Enviar
+        </button>
+      </form>
+
+      {isLoading ? (
+        <p className="text-sm text-white/50">Cargando...</p>
+      ) : !comentarios?.length ? (
+        <p className="text-sm text-white/40">Todavía no dejaste ningún comentario.</p>
+      ) : (
+        <ul className="space-y-2">
+          {comentarios.map((c) => (
+            <li key={c.id} className="rounded-lg bg-brand-surface p-3 text-sm">
+              <p className="mb-1 text-white/50">{formatearFecha(c.fecha)}</p>
+              <p>{c.comentario}</p>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

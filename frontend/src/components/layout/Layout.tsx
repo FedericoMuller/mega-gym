@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from "react-router-dom";
 import {
   ClipboardList,
+  CreditCard,
   Dumbbell,
   LogOut,
   Settings,
@@ -30,6 +31,7 @@ const navProfesorBase: ItemNav[] = [
   { to: "/admin/rutinas", label: "Rutinas", icono: ClipboardList },
   { to: "/admin/ejercicios", label: "Ejercicios", icono: Dumbbell },
   { to: "/admin/maquinas", label: "Máquinas", icono: Settings },
+  { to: "/admin/socios", label: "Socios", icono: CreditCard },
   { to: "/perfil", label: "Perfil", icono: User },
 ];
 

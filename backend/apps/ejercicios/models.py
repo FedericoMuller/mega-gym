@@ -24,23 +24,15 @@ class TipoEjercicio(models.TextChoices):
     AISLAMIENTO = "aislamiento", "Aislamiento"
 
 
-class EquipamientoEjercicio(models.TextChoices):
-    MAQUINA = "maquina", "Máquina"
-    MANCUERNAS = "mancuernas", "Mancuernas"
-    BARRA = "barra", "Barra"
-    POLEA = "polea", "Polea"
-    PESO_CORPORAL = "peso_corporal", "Peso corporal"
-    OTRO = "otro", "Otro"
-
-
 class Ejercicio(models.Model):
     """RF.8: Ejercicio (Incluye: nombre de ejercicio, URL ejercicio)."""
     nombre_ejercicio = models.CharField(max_length=150)
     url_ejercicio = models.URLField(blank=True, null=True)
     categoria = models.CharField(max_length=10, choices=CategoriaEjercicio.choices, blank=True)
     tipo = models.CharField(max_length=12, choices=TipoEjercicio.choices, blank=True)
-    equipamiento = models.CharField(max_length=15, choices=EquipamientoEjercicio.choices, blank=True)
     imagen = models.ImageField(upload_to="ejercicios/", blank=True, null=True)
+    # RF.9: el equipamiento/elemento de un ejercicio es una lista abierta de Accesorio
+    # (el profesor puede agregar nuevos desde la pantalla de Ejercicios), no un enum fijo.
     accesorios = models.ManyToManyField(Accesorio, blank=True, related_name="ejercicios")
     maquinas = models.ManyToManyField(
         "maquinas.Maquina", blank=True, related_name="ejercicios"
